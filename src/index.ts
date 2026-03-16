@@ -10,12 +10,61 @@ import { PDFParse } from "pdf-parse";
 
 const isPdfFile = (path: string): boolean => path.toLowerCase().endsWith(".pdf");
 
+const formatPdfTextAsMarkdown = (text: string): string => {
+  let result = text;
+
+  // Remove page markers like "-- 1 of 22 --"
+  result = result.replace(/^--\s*\d+\s+of\s+\d+\s*--$/gm, "");
+
+  // Main title: CATECHISMUS at the start
+  result = result.replace(/^(CATECHISMUS)\s*$/m, "# $1\n");
+
+  // Zondag sections become ## headings
+  result = result.replace(/^(Zondag\s+\d+)\s*$/gm, "\n## $1\n");
+
+  // Section titles (ALL CAPS lines that are section headers)
+  const sectionTitles = [
+    "HET EERSTE DEEL",
+    "HET TWEEDE DEEL",
+    "HET DERDE DEEL",
+    "VAN DES MENSEN ELLENDE",
+    "VAN DES MENSEN VERLOSSING",
+    "VAN DE DANKBAARHEID, DIE MEN GODE VOOR DE VERLOSSING SCHULDIG IS",
+    "VAN GOD DEN VADER EN ONZE SCHEPPING",
+    "VAN GOD DEN ZOON EN ONZE VERLOSSING",
+    "VAN GOD DEN HEILIGEN GEEST EN ONZE HEILIGMAKING",
+    "VAN DE SACRAMENTEN",
+    "VAN DEN HEILIGEN DOOP",
+    "VAN HET HEILIG AVONDMAAL ONZES HEEREN",
+    "VAN DE WET",
+    "VAN HET GEBED",
+  ];
+
+  for (const title of sectionTitles) {
+    const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    result = result.replace(new RegExp(`^(${escaped})\\s*$`, "gm"), "\n### $1\n");
+  }
+
+  // Question numbers: standalone numbers at start of line followed by question text
+  // Handle both single-line and multi-line questions (ending with ?)
+  result = result.replace(/^(\d+)\s*\n([\s\S]*?\?)\s*$/gm, (_match, num, question) => {
+    // Clean up the question text (remove extra newlines, normalize spaces)
+    const cleanQuestion = question.replace(/\s+/g, " ").trim();
+    return `\n#### Vraag ${num}: ${cleanQuestion}\n`;
+  });
+
+  // Clean up multiple blank lines
+  result = result.replace(/\n{3,}/g, "\n\n");
+
+  return result.trim();
+};
+
 const convertPdfToMarkdown = (pdfBuffer: Uint8Array): Effect.Effect<string, Error, never> =>
   Effect.tryPromise({
     try: async () => {
       const pdf = new PDFParse({ data: pdfBuffer });
       const textResult = await pdf.getText();
-      return textResult.text;
+      return formatPdfTextAsMarkdown(textResult.text);
     },
     catch: (error) => new Error(`Failed to parse PDF: ${error}`),
   });

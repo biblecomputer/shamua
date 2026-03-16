@@ -6,6 +6,19 @@ import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { FileSystem } from "@effect/platform";
 import { transformFile } from "./transformer.js";
 import type { SupportedLanguage } from "./books.js";
+import { PDFParse } from "pdf-parse";
+
+const isPdfFile = (path: string): boolean => path.toLowerCase().endsWith(".pdf");
+
+const convertPdfToMarkdown = (pdfBuffer: Uint8Array): Effect.Effect<string, Error, never> =>
+  Effect.tryPromise({
+    try: async () => {
+      const pdf = new PDFParse({ data: pdfBuffer });
+      const textResult = await pdf.getText();
+      return textResult.text;
+    },
+    catch: (error) => new Error(`Failed to parse PDF: ${error}`),
+  });
 
 const inputOption = Options.file("input").pipe(
   Options.withAlias("i"),
@@ -31,8 +44,8 @@ const shamua = Command.make(
       const fs = yield* FileSystem.FileSystem;
 
       // Validate language
-      if (language !== "english") {
-        yield* Console.error(`Unsupported language: ${language}. Only 'english' is currently supported.`);
+      if (language !== "english" && language !== "dutch") {
+        yield* Console.error(`Unsupported language: ${language}. Supported: 'english', 'dutch'.`);
         return yield* Effect.fail(new Error(`Unsupported language: ${language}`));
       }
 
@@ -40,7 +53,15 @@ const shamua = Command.make(
 
       // Read input file
       yield* Console.log(`Reading input file: ${input}`);
-      const content = yield* fs.readFileString(input);
+
+      let content: string;
+      if (isPdfFile(input)) {
+        yield* Console.log("Detected PDF file, converting to text...");
+        const pdfBuffer = yield* fs.readFile(input);
+        content = yield* convertPdfToMarkdown(pdfBuffer);
+      } else {
+        content = yield* fs.readFileString(input);
+      }
 
       // Transform content
       yield* Console.log("Processing Bible references...");

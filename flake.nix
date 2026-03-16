@@ -16,7 +16,7 @@
           version = "0.1.0";
           src = ./.;
 
-          npmDepsHash = "sha256-kz2EBfI0qo3ozRrFBBGzXb0uAnuctn+fg114wD79hl0=";
+          npmDepsHash = "sha256-jQ5Eg/KpNwptBYeafDcavgcQVpQNPsfo0BGD1bFmokk=";
 
           nativeBuildInputs = with pkgs; [
             typescript

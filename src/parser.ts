@@ -16,19 +16,21 @@ const createReferencePattern = (bookPattern: string): RegExp => {
   // Match patterns like:
   // "Book Chapter" (Genesis 1)
   // "Book Chapter:Verse" (Genesis 1:1)
+  // "Book. Chapter:Verse" (Rom. 14:8) - Dutch style with period after abbreviation
   // "Book Chapter-Chapter" (Psalm 23-24)
   // "Book Chapter-Chapter:Verse" (Psalm 23-24:2)
   // "Book Chapter:Verse-Chapter:Verse" (Psalm 23:4-24:2)
   // "Book Chapter:Verse-Verse" (Psalm 23:1-5)
   // "BookChapter:Verse" (Ps23:1) - no space
   // "BookChapter:Verse,Verse,Verse" (Ps23:1,2,6) - comma separated verses
-  const pattern = `(${bookPattern})\\s*(\\d+)(?::(\\d+))?(?:(?:,\\d+)+|(?:[-–](\\d+)(?::(\\d+))?))?`;
+  // Note: \.? allows optional period after book name (Dutch abbreviations use periods)
+  const pattern = `(${bookPattern})\\.?\\s*(\\d+)(?::(\\d+))?(?:(?:,\\d+)+|(?:[-–](\\d+)(?::(\\d+))?))?`;
   return new RegExp(pattern, "gi");
 };
 
 const createVerseListPattern = (bookPattern: string): RegExp => {
-  // Match comma-separated verse patterns like "Ps23:1,2,6"
-  const pattern = `(${bookPattern})\\s*(\\d+):(\\d+)((?:,\\d+)+)`;
+  // Match comma-separated verse patterns like "Ps23:1,2,6" or "Ps. 23:1,2,6"
+  const pattern = `(${bookPattern})\\.?\\s*(\\d+):(\\d+)((?:,\\d+)+)`;
   return new RegExp(pattern, "gi");
 };
 
